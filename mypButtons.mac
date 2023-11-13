@@ -1,0 +1,309 @@
+ROUTINE mypButtons
+    write !
+    write "do readdir^mypButtons(""C:\temp\dir\"",""^||naka"")",!
+    write "do readone^mypButtons(""C:\temp\dir\xxxxx.html"",""^||naka"")",!
+    write "do writecsv^mypButtons(""C:\temp\csv\"",""^||naka"")",!
+    write "   mgstat.csv, perfmon.csv",!
+    write "   mypButtons.csv",!
+    write "      mgstat:  Glorefs, PhyRds, Gloupds, PhyWrs, WDQsz, WDphase",!
+    write "      perfmon: Available MBytes, Disk Reads/sec, Disk Writes/sec, % Processor Time",!
+    quit
+
+readdir(dir, glb="^naka")
+    if $g(dir)="" write !,"do readdir^mypButtons(dir,glb)",! quit
+
+    write "[read HTML]",!
+    set file=$ZSE(dir_"\*.html")
+    for  {
+        if file="" quit
+        do readone^mypButtons(file,glb)
+
+        set file=$ZSE("")
+    }
+    
+    write !
+    quit
+
+readone(file, glb="^naka")
+    if $g(file)="" write !,"do readone^mypButtons(file,glb)",! quit
+
+    open file:"R":1
+    if $T=0 write !,"cannot open "_file,! quit
+
+    ;;------ read HTML ------
+    set $ZT="EOF"
+    use file
+    set id=0        ;; current id
+    set mgstatl=0   ;; mgstat line#
+    set perfmonl=0  ;; perfmon line#
+
+    do DISABLE^%SYS.NOJRN  ;;--- JOURNAL OFF ---
+    for  {
+        read line
+        ;; (1) <div id= : get ID
+        if line["<div id=" {
+            set id=$P($P(line,"<div id=",2),">",1)   ;; <div id=xxx> -> xxx
+            continue
+        }
+
+        ;; (2) <pre> or </pre> or <!  : skip
+        if line="<pre>"      continue
+        if line="</pre>"     continue
+        if $E(line,1,2)="<!" continue
+
+        ;; (3) current id is not mgstat, perfmon : skip
+        if id'="mgstat",id'="perfmon" continue
+
+        ;; (4) mgstat
+        if id="mgstat" {
+            set mgstatl=mgstatl+1
+
+            ;; line #1 : skip
+            if mgstatl=1 continue
+
+            set line2=$TR(line," ","")   ;; remove spaces
+
+            ;; line #2 : header
+            if mgstatl=2 {
+                set len=$L(line2,",")
+                for i=3:1:len {
+                    set @glb@("mgstat",0,"header",i)=$P(line2,",",i)
+                }
+                set @glb@("mgstat",0,"header")=len
+                continue
+            }
+
+            ;; line #3- : data  -->  @glb("mgstat", 1, dateH, timeH, #)=value
+            set date=$P(line2,",",1)  ;; mm/dd/yyyy
+            set time=$P(line2,",",2)  ;; hh:mm:ss
+
+            set h=$ZDTH(date_" "_time)  ;; dateH,timeH
+            set dateH=+h
+            set timeH=$P(h,",",2)
+
+            ;; if data exists, do NOT overwrite
+            if $D(@glb@("mgstat",1,dateH,timeH))'=0 continue
+
+            for i=3:1:len {
+                set @glb@("mgstat",1,dateH,timeH,i)=$P(line2,",",i)
+            }
+            continue
+        }
+
+        ;; (5) perfmon
+        if id="perfmon" {
+            set perfmonl=perfmonl+1
+            set line2=$TR(line,"""","")   ;; remove double quotes
+
+            ;; line #1 : header
+            if perfmonl=1 {
+                set len=$L(line2,",")
+                for i=2:1:len {
+                    set item=$P(line2,",",i)   ;; \\machine\category\item
+                    set @glb@("perfmon",0,"header",i)=$P(item,"\",4,5)    ;; category\item
+                }
+                set @glb@("perfmon",0,"header")=len
+                continue
+            }
+
+            ;; line #2- : data  -->  @glb("perfmon", 1, dateH, timeH, #)=value
+            set datetime=$P(line2,",",1)      ;; mm/dd/yyyy hh:mm:ss.nnn
+            set datetime2=$P(datetime,".",1)  ;; mm/dd/yyyy hh:mm:ss
+
+            set h=$ZDTH(datetime2)  ;; dateH,timeH
+            set dateH=+h
+            set timeH=$P(h,",",2)
+
+            ;; if data exists, do NOT overwrite
+            if $D(@glb@("perfmon",1,dateH,timeH))'=0 continue
+
+            for i=2:1:len {
+                set @glb@("perfmon",1,dateH,timeH,i)=$P(line2,",",i)
+            }
+            continue
+        }
+    }
+EOF
+    do ENABLE^%SYS.NOJRN  ;;--- JOURNAL ON ---
+    close file
+
+    write "Done: ",file,!
+    quit
+
+
+writecsv(dir, glb="^naka")
+    if $g(dir)="" write !,"do writecsv^mypButtons(dir,glb)",! quit
+
+    ;;---------------------------------------------------
+    kill mymgstat,myperfmon
+
+    set mymgstat("Glorefs")=""
+    set mymgstat("PhyRds")=""
+    set mymgstat("Gloupds")=""
+    set mymgstat("PhyWrs")=""
+    set mymgstat("WDQsz")=""
+    set mymgstat("WDphase")=""
+
+    set myperfmon("Memory\Available MBytes")=""
+    set myperfmon("PhysicalDisk(_Total)\Disk Reads/sec")=""
+    set myperfmon("PhysicalDisk(_Total)\Disk Writes/sec")=""
+    set myperfmon("Processor(_Total)\% Processor Time")=""
+    ;;---------------------------------------------------
+
+    kill mypButtons   ;; mypButtons(0)=header,  mypButtons(1,dateH,timeH)=xx,xx,....,xx
+    kill mypButtonsi  ;; mypButtonsi("mgstat",column) , mypButtonsi("perfmon",column)
+
+    ;;------ mgstat ------
+    use 0 write "[mgstat]",!
+    set file=dir_"\mgstat.csv"
+    open file:"WNS"
+
+    set len=@glb@("mgstat",0,"header")
+
+    ;; header
+    ;; mypButtons.csv: Glorefs, PhyRds, Gloupds, PhyWrs, WDQsz, WDphase
+    set line="Date,Time"
+    set mypButtons(0)="Date,Time"
+    for i=3:1:len {
+        set item=@glb@("mgstat",0,"header",i)
+        set line=line_","_item
+        if $d(mymgstat(item))'=0 {
+        ;;if (item="Glorefs")!(item="PhyRds")!(item="Gloupds")!(item="PhyWrs")!(item="WDQsz")!(item="WDphase") {
+            set mypButtons(0)=mypButtons(0)_","_item
+            set mypButtonsi("mgstat",i)=""
+        }
+    }
+    use file  write line,!
+
+    ;; data
+    set dateH=""
+    for  {
+        set dateH=$O(@glb@("mgstat",1,dateH))
+        if dateH="" quit
+
+        set timeH=""
+        for  {
+            set timeH=$O(@glb@("mgstat",1,dateH,timeH))
+            if timeH="" quit
+
+            set datetime=$ZDT(dateH_","_timeH)
+            set date=$P(datetime," ",1)
+            set time=$P(datetime," ",2)
+
+            set line=date_","_time
+            set mypButtons(1,dateH,timeH)=line
+            for i=3:1:len {
+                set value=@glb@("mgstat",1,dateH,timeH,i)
+                set line=line_","_value
+                if $D(mypButtonsi("mgstat",i))=1 {
+                    set mypButtons(1,dateH,timeH)=mypButtons(1,dateH,timeH)_","_value
+                }
+            }
+            use file write line,!
+
+            if $E(time,4,8)="00:00" {
+                use 0 write "Done: ",datetime,!
+            }
+
+        }
+    }
+    close file
+    write "Done",!!
+
+    ;;------ perfmon ------
+    use 0 write "[perfmon]",!
+    set file=dir_"\perfmon.csv"
+    open file:"WNS"
+
+    set len=@glb@("perfmon",0,"header")
+
+    ;; header
+    ;; mypButtons.csv: Memory\Available MBytes, PhysicalDisk(_Total)\Disk Reads/sec, PhysicalDisk(_Total)\Disk Writes/sec, Processor(_Total)\% Processor Time
+    set line="Date,Time"
+    for i=2:1:len {
+        set item=@glb@("perfmon",0,"header",i)
+        set line=line_","_item
+        if $d(myperfmon(item))'=0 {
+        ;;if (item="Memory\Available MBytes")!(item="PhysicalDisk(_Total)\Disk Reads/sec")!(item="PhysicalDisk(_Total)\Disk Writes/sec")!(item="Processor(_Total)\% Processor Time") {
+            set mypButtons(0)=mypButtons(0)_","_$P(item,"\",2)
+            set mypButtonsi("perfmon",i)=""
+        }
+    }
+    use file write line,!
+
+    ;; data
+    set dateH=""
+    for  {
+        set dateH=$O(@glb@("perfmon",1,dateH))
+        if dateH="" quit
+
+        set timeH=""
+        for  {
+            set timeH=$O(@glb@("perfmon",1,dateH,timeH))
+            if timeH="" quit
+
+            set datetime=$ZDT(dateH_","_timeH)
+            set date=$P(datetime," ",1)
+            set time=$P(datetime," ",2)
+
+            set line=date_","_time
+            for i=2:1:len {
+                set value=@glb@("perfmon",1,dateH,timeH,i)
+                set line=line_","_value
+                if $D(mypButtonsi("perfmon",i))=1 {
+                    ;; if mgstat does not exist for this second, skip
+                    ;;+++
+                    ;;if $G(mypButtons(1,dateH,timeH))="" continue
+                    if $G(mypButtons(1,dateH,timeH))="" {
+                        if $G(mypButtons(1,dateH,timeH+1))="" continue
+                        set mypButtons(1,dateH,timeH+1)=mypButtons(1,dateH,timeH+1)_","_value
+                        continue
+                    }
+                    ;;---
+
+                    set mypButtons(1,dateH,timeH)=mypButtons(1,dateH,timeH)_","_value
+                }
+            }
+            use file write line,!
+
+            if $E(time,4,8)="00:00" {
+                use 0 write "Done: ",datetime,!
+            }
+        }
+    }
+    close file
+    write "Done",!!
+
+    ;;------ mypButtons ------
+    use 0 write "[mypButtons]",!
+    set file=dir_"\mypButtons.csv"
+    open file:"WNS"
+
+    ;; header
+    use file write mypButtons(0),!
+
+    ;; data
+    set dateH=""
+    for  {
+        set dateH=$O(mypButtons(1,dateH))
+        if dateH="" quit
+
+        set timeH=""
+        for  {
+            set timeH=$O(mypButtons(1,dateH,timeH))
+            if timeH="" quit
+
+            use file write mypButtons(1,dateH,timeH),!
+
+            set datetime=$ZDT(dateH_","_timeH)
+            set time=$P(datetime," ",2)
+            if $E(time,4,8)="00:00" {
+                use 0 write "Done: ",datetime,!
+            }
+        }
+
+    }
+    close file
+    write "Done",!!
+
+    quit
