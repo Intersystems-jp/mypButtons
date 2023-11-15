@@ -14,6 +14,8 @@ Now I introduce a new utiltiy **^mypButtons**!
 * **^mypButtons** generates a single CSV file into your laptop so it's much easier to crete your graph as you like.
 * **^mypButtons** generates a CSV and it includes columns which I strongly recommend to check as the first step to see the performance of InterSystems product. So everyone can enjoy a peformance graph with this utility so easily!
 
+***Please Note!*** If you want to play mypButtons.csv, please load SystemPerformance HTML files with "every 1 second" profile.
+
 # How to run
 > do readone^mypButtons("C:\temp\dir\myserver_IRIS_20230522_130000_8hours.html","^||naka")
 
@@ -48,9 +50,31 @@ Available profiles:
 　　6 test    - 5-minute TEST run sampling every 30 seconds  
 select profile number to run: **3**
 
-If you want to know about ^SystemPerformance more, see [our documentation](https://docs.intersystems.com/irislatest/csp/docbook/Doc.View.cls?KEY=GCM_systemperf "Monitoring Performance Using ^SystemPerformance") for more details.  
+***Please Note!*** If you want to play mypButtons.csv, please use "every 1 second" profile. By default, you will see "30 mins" profile which samples every 1 second. If you want to create another profiles, see [our documentation](https://docs.intersystems.com/irislatest/csp/docbook/Doc.View.cls?KEY=GCM_systemperf "Monitoring Performance Using ^SystemPerformance") for more details.  
 
-(2) After sampling, one HTML will be generated under *irisdir*\mgr, whose name is like *myserver_IRIS_20230522_171600_30mins.html* (The file name format is *servername* _ *instancename* _ *yyyymmdd* _ *hhmmss* _ *profilename*.html) Open a generated HTML, and you will see a lot of information with **mgstat** and **perfmon** section.
+(2) After sampling, one HTML will be generated under *irisdir*\mgr, whose name is like *JP7320NAKAHASH_IRIS_20231115_100708_30mins.html*. Open a generated HTML, and you will see a lot of performance comma separated data under **mgstat** and **perfmon** section.
 ![SystemPerformance HTML header](images/SystemPerformanceHTMLheader.png)
 
-(3) 
+(3) Load it with *^mypButtons* as below.
+> USER> **do readone^mypButtons("C:\InterSystems\IRIS\mgr\JP7320NAKAHASH_IRIS_20231115_100708_30mins.html","^||naka")**
+
+This will load HTML in the first parameter and save the performance data into the global in the second parameter.
+
+(4) Generate CSV witl *^mypButtons* as below.
+> USER> **do writecsv^mypButtons("C:\temp\","^||naka")**
+
+This will output three CSV files under the folder in the first parameter from the global in the second parameter. Open mypButtons.csv in the excel, and you can see mgstat and perfmon is in the same line every second. See this screenshot - yellow highlighted columns are mgstat and blue highlighted columns are perfmon.
+![mypButtons CSV header](images/mypButtonsCSVheader.png)
+
+(5) Let's create a simple graph from this CSV. It's so easy. Choose column B *Time* and column C *Glorefs*, select *Insert* menu, 2-D Line graphs as below.
+![Glorefs 2D-line](images/glorefs2Dline.png)
+
+This graph will show you "Global Refernce numbers per second" information. Sorry, there were very few activities in my IRIS instance so my sample graph does not excite you, but I do believe this graph from the production server will tell you a lot of useful information!
+![Global Refernces](images/GlorefsSample800.png)
+
+(6) mypButtons.csv includes selected columns which I think you should check first. [Murray's article series](https://community.intersystems.com/post/intersystems-data-platforms-capacity-planning-and-performance-series-index) will tell you why these columns are important to see the performance.
+
+# Edit **^mypButtons** for reporting columns
+If you want to change columns which are reported into mypButtons.csv, please modify writecsv label manually. It reports columns which are defined in this area.
+![writecsv label](images/writecsv.png)
+
