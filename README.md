@@ -67,7 +67,7 @@ This will output three CSV files under the folder in the first parameter from th
 ![mypButtons CSV header](images/mypButtonsCSVheader.png)
 
 (5) Let's create a simple graph from this CSV. It's so easy. Choose column B *Time* and column C *Glorefs*, select *Insert* menu, 2-D Line graphs as below.
-![Glorefs 2D-line](images/glorefs2Dline.png)
+![Glorefs 2D-line](images/Glorefs2Dline.png)
 
 This graph will show you "Global Refernce numbers per second" information. Sorry, there were very few activities in my IRIS instance so my sample graph does not excite you, but I do believe this graph from the production server will tell you a lot of useful information!
 ![Global Refernces](images/GlorefsSample800.png)
