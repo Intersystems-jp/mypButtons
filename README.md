@@ -38,7 +38,7 @@ Here, mypButtons.csv includes the following columns by default, which I strongly
 
 This utility works for InterSystems IRIS, InterSystems IRIS for Health, Caché and Ensemble for Windows.
 
-# Example steps to create your IRIS server's peformance graph with ^mypButtons
+# Example steps to create your IRIS server's performance graph with ^mypButtons
 (1) First, run ^SystemPerformance to record both our own performance tool *mgstat* and Windows peformance monitor *perfmon*. By default, InterSystems IRIS has some profiles so you can enjoy it soon. Try this from IRIS terminal.
 > %SYS> **do ^SystemPerformance**  
 Current log directory: c:\intersystems\iris\mgr\  
