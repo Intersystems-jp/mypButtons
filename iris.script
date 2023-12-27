@@ -1,0 +1,22 @@
+;do $System.OBJ.LoadDir("/opt/irisapp/src","ck",,1)
+
+zn "%SYS"
+Do ##class(Security.Users).UnExpireUserPasswords("*")
+
+
+;zn "USER"
+;zpm "install webterminal"
+;zpm "load https://github.com/intersystems-community/webterminal.git"
+
+zn "%sys"
+
+
+if $zf(-1,"echo ':zn ""%sys""' >> ~/.iris_history")
+
+if $zf(-1,"echo ':do ^SystemPerformance' >> ~/.iris_history")
+
+
+zpm "load /opt/irisapp/ -v":1
+;zpm "load https://github.com/SergeyMi37/isc-passwordless.git"
+
+halt

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+<Document name="mypButtons.ZPM">
+<Module>
+ <Name>mypButtons</Name>
+  <Version>0.0.1</Version>
+  <Description>About mypButtons routine creates one CSV from multiple pButtons</Description>
+  <Keywords>Extension Package Manager</Keywords>
+  <Packaging>module</Packaging>
+  <SourcesRoot>src</SourcesRoot>
+  <Resource Name="mypButtons.MAC" />
+</Module>
+</Document>
+</Export>
